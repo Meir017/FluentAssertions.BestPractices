@@ -38,15 +38,17 @@ namespace FluentAssertions.Analyzers.Tests
             // old: .B() ... .D()
             // new: .H() ...
 
-            var oldAssertion = "nestedList.Should().NotBeNull(\"because I said {0} so\".Substring(\"because\".Length), Environment.MachineName).And.ContainSingle().Which.Should().NotBeEmpty();";
+            var oldAssertion = "nestedList.Should().NotBeNull(\"because I said {0} so\".Substring(\"because\".Length), 6).And.ContainSingle().Which.Should().NotBeEmpty();";
             var newAssertion = "a.A().H(\"The Reason {0} is so {1}\", \"this\", 7).C.E.F(\"go to {0} and then {1} !.\", \"hell\", true);";
+
+            oldAssertion = "actual.Should().NotBeNull().And.NotBeEmpty(\"because message with {0} placeholders {1} at {2}\", 3, \"is awesome\", DateTime.Now.Add(2.Seconds()))";
 
             var oldSource = Template(oldAssertion);
             var newSource = Template(newAssertion);
 
             var statement = ParseStatement(oldAssertion);
 
-            var walker = new PocCSharpSyntaxWalker("Should", "NotBeNull", "And", "NotBeEmpty");
+            var walker = new PocSyntaxWalker("Should", "NotBeNull", "And", "NotBeEmpty");
             statement.Accept(walker);
 
             var result = walker.IsValid;
@@ -57,6 +59,34 @@ namespace FluentAssertions.Analyzers.Tests
             */
             var nestedList = new List<List<int>>();
             nestedList.Should().NotBeNull("because I said {0} so".Substring("because".Length + 1), Environment.MachineName).And.ContainSingle().Which.Should().NotBeEmpty();
+        }
+
+        [AssertionDataTestMethod]
+        [AssertionDiagnostic("actual.Should().NotBeNull().And.NotBeEmpty({0});")]
+        [AssertionDiagnostic("actual.Should().NotBeEmpty().And.NotBeNull({0});")]
+        [AssertionDiagnostic("actual.AsEnumerable().Should().NotBeNull().And.NotBeEmpty({0}).And.ToString();")]
+        [AssertionDiagnostic("actual.AsEnumerable().Should().NotBeEmpty().And.NotBeNull({0}).And.ToString();")]
+        public void PocCollectionShouldNotBeNullOrEmpty_ShouldTriggerAnalyzer(string assertion)
+        {
+            var source = GenerateCode.EnumerableCodeBlockAssertion(assertion);
+            DiagnosticVerifier.VerifyCSharpDiagnostic<PocCollectionShouldNotBeNullOrEmptyAnalyzer>(source, new DiagnosticResult
+            {
+                Id = PocCollectionShouldNotBeNullOrEmptyAnalyzer.DiagnosticId,
+                Locations = new DiagnosticResultLocation[]
+                {
+                    new DiagnosticResultLocation("Test0.cs", 11, 13)
+                },
+                Message = PocCollectionShouldNotBeNullOrEmptyAnalyzer.Message,
+                Severity = DiagnosticSeverity.Info
+            });
+        }
+
+        [AssertionDataTestMethod]
+        [AssertionDiagnostic("nestedList.Should().NotBeNull({0}).And.ContainSingle().Which.Should().NotBeEmpty();")]
+        public void PocCollectionShouldNotBeNullOrEmpty_ShouldNotTriggerAnalyzer(string assertion)
+        {
+            var source = GenerateCode.EnumerableCodeBlockAssertion(assertion);
+            DiagnosticVerifier.VerifyCSharpDiagnostic<PocCollectionShouldNotBeNullOrEmptyAnalyzer>(source);
         }
 
         [TestMethod]

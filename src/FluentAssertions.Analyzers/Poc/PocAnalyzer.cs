@@ -12,15 +12,9 @@ namespace FluentAssertions.Analyzers
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class PocAnalyzer : DiagnosticAnalyzer
     {
-        public const string DiagnosticId = "PocAnalyzer";
-        public const string Category = "POC";
-        public const string Title = "POC analyzer";
-
-        public const string Message = "POC analyzer tree searcher";
-
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
-        private readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
+        protected virtual DiagnosticDescriptor Rule => new DiagnosticDescriptor("PocAnalyzer", "POC analyzer", "POC analyzer tree searcher", "POC", DiagnosticSeverity.Info, true);
 
         public override void Initialize(AnalysisContext context)
         {
@@ -56,29 +50,76 @@ namespace FluentAssertions.Analyzers
             }
         }
 
+        protected virtual IEnumerable<PocSyntaxWalker> Visitors { get; }
+
         private Diagnostic AnalyzeExpression(ExpressionSyntax expression)
         {
-            var walker = new PocCSharpSyntaxWalker("Should", "NotBeNull", "And", "NotBeEmpty");
-            expression.Accept(walker);
+            foreach (var visitor in Visitors)
+            {
+                expression.Accept(visitor);
 
-            var result = walker.IsValid;
-
+                if (visitor.IsValid)
+                {
+                    return CreateDiagnostic(visitor, expression);
+                }
+            }
             return null;
         }
 
-
+        protected virtual Diagnostic CreateDiagnostic(PocSyntaxWalker visitor, ExpressionSyntax expression)
+        {
+            return Diagnostic.Create(
+                descriptor: Rule,
+                location: expression.GetLocation());
+        }
     }
 
-    public class PocCSharpSyntaxWalker : CSharpSyntaxWalker
+    [DiagnosticAnalyzer(LanguageNames.CSharp)]
+    public class PocCollectionShouldNotBeNullOrEmptyAnalyzer : PocAnalyzer
+    {
+        public const string Title = "TitlePocCollectionShouldNotBeNullOrEmptyAnalyzer";
+        public const string DiagnosticId = "PocCollectionShouldNotBeNullOrEmptyAnalyzerId";
+        public const string Category = Constants.Tips.Category;
+
+        public const string Message = "Use .Should().NotBeNullOrEmpty() instead.";
+
+        protected override DiagnosticDescriptor Rule => new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
+
+        protected override IEnumerable<PocSyntaxWalker> Visitors
+        {
+            get
+            {
+                yield return new ShouldNotBeEmptyAndNotBeNullSyntaxVisitor();
+                yield return new ShouldNotBeNullAndNotBeEmptySyntaxVisitor();
+            }
+        }
+
+        public class ShouldNotBeNullAndNotBeEmptySyntaxVisitor : PocSyntaxWalker
+        {
+            public ShouldNotBeNullAndNotBeEmptySyntaxVisitor() : base("Should", "NotBeNull", "And", "NotBeEmpty")
+            {
+            }
+        }
+        public class ShouldNotBeEmptyAndNotBeNullSyntaxVisitor : PocSyntaxWalker
+        {
+            public ShouldNotBeEmptyAndNotBeNullSyntaxVisitor() : base("Should", "NotBeEmpty", "And", "NotBeNull")
+            {
+            }
+        }
+    }
+
+    public class PocSyntaxWalker : CSharpSyntaxWalker
     {
         public readonly string[] SpecialProperties = { "And", "Which" };
+
+        public ExpressionSyntax Leaf { get; private set; }
 
         public ImmutableStack<string> AllMembers { get; }
         public ImmutableStack<string> Members { get; private set; }
 
-        public bool IsValid { get; private set; }
+        public bool IsValid => Members.IsEmpty;
 
-        public PocCSharpSyntaxWalker(params string[] members)
+        public PocSyntaxWalker(params string[] members)
         {
             AllMembers = ImmutableStack.Create(members);
             Members = AllMembers;
@@ -86,16 +127,14 @@ namespace FluentAssertions.Analyzers
 
         public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
         {
-            if (Members.IsEmpty)
-            {
-                IsValid = true;
-                return;
-            }
-
             var name = node.Name.Identifier.Text;
             Console.WriteLine($"MemberAccess: {name}, Members: {string.Join(",", Members)}");
 
-            if (SpecialProperties.Contains(Members.Peek()))
+            if (IsValid)
+            {
+                // no op
+            }
+            else if (SpecialProperties.Contains(Members.Peek()))
             {
                 Members = Members.Pop();
             }
@@ -117,6 +156,11 @@ namespace FluentAssertions.Analyzers
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             Visit(node.Expression);
+        }
+
+        public override void VisitIdentifierName(IdentifierNameSyntax node)
+        {
+            Console.WriteLine($"VisitIdentifierName: {node.Identifier.Text}");
         }
 
         /*
