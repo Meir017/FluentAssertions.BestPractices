@@ -9,12 +9,12 @@ using System.Composition;
 namespace FluentAssertions.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class CollectionShouldNotHaveCountAnalyzer : FluentAssertionsAnalyzer
+    public class CollectionShouldNotHaveCountAnalyzer : CollectionAnalyzer
     {
         public const string DiagnosticId = Constants.Tips.Collections.CollectionShouldNotHaveCount;
         public const string Category = Constants.Tips.Category;
 
-        public const string Message = "Use {0} .Should() followed by .NotHaveCount() instead.";
+        public const string Message = "Use .Should().NotHaveCount() instead.";
 
         protected override DiagnosticDescriptor Rule => new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
         protected override IEnumerable<FluentAssertionsCSharpSyntaxVisitor> Visitors
@@ -25,18 +25,10 @@ namespace FluentAssertions.Analyzers
             }
         }
 
-        private class CountShouldNotBeSyntaxVisitor : FluentAssertionsWithArgumentCSharpSyntaxVisitor
+        public class CountShouldNotBeSyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
         {
-            protected override string MethodContainingArgument => "NotBe";
-            public CountShouldNotBeSyntaxVisitor() : base("Count", "Should", "NotBe")
+            public CountShouldNotBeSyntaxVisitor() : base(MemberValidator.HasNoArguments("Count"), MemberValidator.Should, MemberValidator.ArgumentIsIdentifierOrLiteral("NotBe"))
             {
-            }
-
-            protected override ExpressionSyntax ModifyArgument(ExpressionSyntax expression)
-            {
-                if (expression is IdentifierNameSyntax identifier) return identifier;
-                if (expression is LiteralExpressionSyntax literal) return literal;
-                return null;
             }
         }
     }

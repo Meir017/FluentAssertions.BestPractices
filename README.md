@@ -8,7 +8,7 @@
 * Latest nuget [![NuGet Badge](https://buildstats.info/nuget/fluentassertions.analyzers?includePreReleases=true)](https://www.nuget.org/packages/fluentassertions.analyzers/)
 * The build status is [![Build status](https://ci.appveyor.com/api/projects/status/xxx1txj7qmxwobej?svg=true)](https://ci.appveyor.com/project/Meir017/fluentassertions-bestpractices)
 
-A collection of Analyzers based on the best practices [docs](https://github.com/fluentassertions/fluentassertions/tree/release-5.0/docs/_data/tips).
+A collection of Analyzers based on the best practices [tips](https://fluentassertions.com/tips/).
 
 ## Analysis and Code Fix in Action
 

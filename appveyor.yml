@@ -4,7 +4,7 @@ init:
 
 # Build script
 build_script:
-  - ps: .\build.ps1
+  - ps: .\build.ps1 -Target AppVeyor
 
 # Tests
 test: off
@@ -14,11 +14,7 @@ branches:
   # Whitelist
   only:
     - master
-
-# Artifacts
-artifacts:
-- path: ./artifacts/FluentAssertions.Analyzers*.nupkg
-  name: Artifacts
+    - /feature/.*/
 
 # Build cache
 cache:

@@ -9,25 +9,25 @@ using System.Composition;
 namespace FluentAssertions.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class DictionaryShouldContainKeyAnalyzer : FluentAssertionsAnalyzer
+    public class DictionaryShouldContainKeyAnalyzer : DictionaryAnalyzer
     {
         public const string DiagnosticId = Constants.Tips.Dictionaries.DictionaryShouldContainKey;
         public const string Category = Constants.Tips.Category;
 
-        public const string Message = "Use {0} .Should() followed by .ContainKey() instead.";
+        public const string Message = "Use .Should().ContainKey() instead.";
 
         protected override DiagnosticDescriptor Rule => new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
         protected override IEnumerable<FluentAssertionsCSharpSyntaxVisitor> Visitors
         {
             get
             {
-                yield return new ContainsKeyShouldBeTrue();
+                yield return new ContainsKeyShouldBeTrueSyntaxVisitor();
             }
         }
 
-		private class ContainsKeyShouldBeTrue : FluentAssertionsCSharpSyntaxVisitor
+		public class ContainsKeyShouldBeTrueSyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
 		{
-			public ContainsKeyShouldBeTrue() : base("ContainsKey", "Should", "BeTrue")
+			public ContainsKeyShouldBeTrueSyntaxVisitor() : base(new MemberValidator("ContainsKey"), MemberValidator.Should, new MemberValidator("BeTrue"))
 			{
 			}
 		}
@@ -41,9 +41,9 @@ namespace FluentAssertions.Analyzers
         protected override ExpressionSyntax GetNewExpression(ExpressionSyntax expression, FluentAssertionsDiagnosticProperties properties)
         {
             var remove = NodeReplacement.RemoveAndExtractArguments("ContainsKey");
-            var newStatement = GetNewExpression(expression, remove);
+            var newExpression = GetNewExpression(expression, remove);
 
-            return GetNewExpression(newStatement, NodeReplacement.RenameAndPrependArguments("BeTrue", "ContainKey", remove.Arguments));
+            return GetNewExpression(newExpression, NodeReplacement.RenameAndPrependArguments("BeTrue", "ContainKey", remove.Arguments));
         }
     }
 }

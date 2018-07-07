@@ -9,12 +9,12 @@ using System.Composition;
 namespace FluentAssertions.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class CollectionShouldIntersectWithAnalyzer : FluentAssertionsAnalyzer
+    public class CollectionShouldIntersectWithAnalyzer : CollectionAnalyzer
     {
         public const string DiagnosticId = Constants.Tips.Collections.CollectionShouldIntersectWith;
         public const string Category = Constants.Tips.Category;
 
-        public const string Message = "Use {0} .Should() followed by .IntersectWith() instead.";
+        public const string Message = "Use .Should().IntersectWith() instead.";
 
         protected override DiagnosticDescriptor Rule => new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
         protected override IEnumerable<FluentAssertionsCSharpSyntaxVisitor> Visitors
@@ -25,10 +25,9 @@ namespace FluentAssertions.Analyzers
             }
         }
 
-        private class IntersectShouldNotBeEmptySyntaxVisitor : FluentAssertionsWithArgumentCSharpSyntaxVisitor
+        public class IntersectShouldNotBeEmptySyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
         {
-            protected override string MethodContainingArgument => "Intersect";
-            public IntersectShouldNotBeEmptySyntaxVisitor() : base("Intersect", "Should", "NotBeEmpty")
+            public IntersectShouldNotBeEmptySyntaxVisitor() : base(MemberValidator.HasArguments("Intersect"), MemberValidator.Should, new MemberValidator("NotBeEmpty"))
             {
             }
         }
@@ -42,9 +41,9 @@ namespace FluentAssertions.Analyzers
         protected override ExpressionSyntax GetNewExpression(ExpressionSyntax expression, FluentAssertionsDiagnosticProperties properties)
         {
             var remove = NodeReplacement.RemoveAndExtractArguments("Intersect");
-            var newStatement = GetNewExpression(expression, remove);
+            var newExpression = GetNewExpression(expression, remove);
 
-            return GetNewExpression(newStatement, NodeReplacement.RenameAndPrependArguments("NotBeEmpty", "IntersectWith", remove.Arguments));
+            return GetNewExpression(newExpression, NodeReplacement.RenameAndPrependArguments("NotBeEmpty", "IntersectWith", remove.Arguments));
         }
     }
 }

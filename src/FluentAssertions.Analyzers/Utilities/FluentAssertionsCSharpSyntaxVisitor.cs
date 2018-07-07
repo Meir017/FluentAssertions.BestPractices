@@ -1,112 +1,114 @@
-﻿using Microsoft.CodeAnalysis.CSharp;
+﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 
 namespace FluentAssertions.Analyzers
 {
 
-    public abstract class FluentAssertionsCSharpSyntaxVisitor : CSharpSyntaxVisitor
+    public class FluentAssertionsCSharpSyntaxVisitor : CSharpSyntaxVisitor
     {
-        protected string CurrentMethod => VisitedMethods.Count > 0 ? VisitedMethods.Peek() : null;
+        public string VariableName { get; private set; }
+        public IdentifierNameSyntax IdentifierNameVariable { get; private set; }
 
-        protected Stack<string> AllVisitedMethods { get; } = new Stack<string>();
-        protected Stack<string> VisitedMethods { get; } = new Stack<string>();
+        public ImmutableStack<MemberValidator> AllMembers { get; }
+        public ImmutableStack<MemberValidator> Members { get; private set; }
 
-        /// <summary>
-        /// The order in the syntax tree is reversed
-        /// </summary>
-        protected Stack<string> RequiredMethods { get; }
+        public virtual bool IsValid(ExpressionSyntax expression) => Members.IsEmpty;
 
-        public string VariableName { get; protected set; }
+        public virtual ImmutableDictionary<string, string> ToDiagnosticProperties() => ImmutableDictionary<string, string>.Empty
+            .Add(Constants.DiagnosticProperties.VisitorName, GetType().Name)
+            .Add(Constants.DiagnosticProperties.HelpLink, HelpLinks.Get(GetType()))
+            .ToImmutableDictionary();
 
-        public virtual bool IsValid => VariableName != null && RequiredMethods.Count == 0;
-
-        protected FluentAssertionsCSharpSyntaxVisitor(params string[] requiredMethods)
+        public FluentAssertionsCSharpSyntaxVisitor(params MemberValidator[] members)
         {
-            RequiredMethods = new Stack<string>(requiredMethods);
+            AllMembers = ImmutableStack.Create(members);
+            Members = AllMembers;
         }
 
-        public virtual ImmutableDictionary<string, string> ToDiagnosticProperties() => new Dictionary<string, string>
+        public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
         {
-            [Constants.DiagnosticProperties.VariableName] = VariableName,
-            [Constants.DiagnosticProperties.VisitorName] = GetType().Name
-        }.ToImmutableDictionary();
+            var name = node.Name.Identifier.Text;
+
+            if (Members.IsEmpty)
+            {
+                // no op
+            }
+            else if (name == "And")
+            {
+                if (Members.Peek().Name == "And")
+                {
+                    Members = Members.Pop();
+                }
+            }
+            else if (node.Parent is InvocationExpressionSyntax invocation)
+            {
+                var member = Members.Peek();
+                if (member.Name == name && member.AreArgumentsValid(invocation.ArgumentList.Arguments))
+                {
+                    Members = Members.Pop();
+                }
+                else
+                {
+                    Members = AllMembers;
+                }
+            }
+            else if (node.Parent is MemberAccessExpressionSyntax memberAccess && memberAccess.IsKind(SyntaxKind.SimpleMemberAccessExpression)
+                && name == Members.Peek().Name)
+            {
+                Members = Members.Pop();
+            }
+            else
+            {
+                Members = AllMembers;
+            }
+
+            Visit(node.Expression);
+        }
+
+        public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
+        {
+            const string name = "[]";
+
+            var member = Members.Peek();
+            if (Members.IsEmpty)
+            {
+                // no op
+            }
+            else if (member.Name == name && member.AreArgumentsValid(node.ArgumentList.Arguments))
+            {
+                Members = Members.Pop();
+            }
+            else
+            {
+                Members = AllMembers;
+            }
+
+            Visit(node.Expression);
+        }
 
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             Visit(node.Expression);
-            Visit(node.ArgumentList);
-
-            if (VisitedMethods.Count > 0) VisitedMethods.Pop();
         }
 
-        public override void VisitArgumentList(ArgumentListSyntax node)
+        public override void VisitIdentifierName(IdentifierNameSyntax node)
         {
-            foreach (var argument in node.Arguments)
-            {
-                Visit(argument);
-            }
-        }
-
-        public sealed override void VisitExpressionStatement(ExpressionStatementSyntax node) => Visit(node.Expression);
-
-        public sealed override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
-        {
-            var methodName = node.Name.Identifier.Text;
-
-            VisitMethod(methodName);
-
-            Visit(node.Expression);
-
-            if (node.Parent is MemberAccessExpressionSyntax && VisitedMethods.Count > 0)
-            {
-                VisitedMethods.Pop();
-            }
-        }
-
-        public sealed override void VisitElementAccessExpression(ElementAccessExpressionSyntax node)
-        {
-            const string methodName = "[]";
-
-            VisitMethod(methodName);
-
-            Visit(node.Expression);
-            Visit(node.ArgumentList);
-
-            VisitedMethods.Pop();
-        }
-
-        public sealed override void VisitIdentifierName(IdentifierNameSyntax node)
-        {
-            if (RequiredMethods.Count == 0)
-            {
-                VariableName = node.Identifier.Text;
-            }
-        }
-
-        private void VisitMethod(string methodName)
-        {
-            AllVisitedMethods.Push(methodName);
-            VisitedMethods.Push(methodName);
-            if (RequiredMethods.Count > 0 && methodName.Equals(RequiredMethods.Peek()))
-            {
-                RequiredMethods.Pop();
-            }
+            IdentifierNameVariable = node;
+            VariableName = node.Identifier.Text;
         }
 
         /*
         private int _indent = 0;
-        public override void Visit(Microsoft.CodeAnalysis.SyntaxNode node)
+        public override void Visit(SyntaxNode node)
         {
             _indent++;
             var indent = new string(' ', _indent * 2);
-            if (this.GetType().Name == "ShouldContainKeyAndContainValueSyntaxVisitor")
-                System.Console.WriteLine($"{indent}{CurrentMethod ?? "<null>"}: {node.GetType().Name}");
+            Console.WriteLine($"{indent}{node.GetType().Name}");
             base.Visit(node);
             --_indent;
         }
         */
-
     }
 }

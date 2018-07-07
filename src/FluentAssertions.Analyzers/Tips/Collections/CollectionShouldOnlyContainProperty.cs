@@ -9,12 +9,12 @@ using System.Composition;
 namespace FluentAssertions.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class CollectionShouldOnlyContainPropertyAnalyzer : FluentAssertionsAnalyzer
+    public class CollectionShouldOnlyContainPropertyAnalyzer : CollectionAnalyzer
     {
         public const string DiagnosticId = Constants.Tips.Collections.CollectionShouldOnlyContainProperty;
         public const string Category = Constants.Tips.Category;
 
-        public const string Message = "Use {0} .Should() followed by .OnlyContain() instead.";
+        public const string Message = "Use .Should().OnlyContain() instead.";
 
         protected override DiagnosticDescriptor Rule => new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
 
@@ -26,10 +26,9 @@ namespace FluentAssertions.Analyzers
             }
         }
 
-        public class AllShouldBeTrueSyntaxVisitor : FluentAssertionsWithLambdaArgumentCSharpSyntaxVisitor
+        public class AllShouldBeTrueSyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
         {
-            protected override string MethodContainingLambda => "All";
-            public AllShouldBeTrueSyntaxVisitor() : base("All", "Should", "BeTrue")
+            public AllShouldBeTrueSyntaxVisitor() : base(MemberValidator.MathodContainingLambda("All"), MemberValidator.Should, new MemberValidator("BeTrue"))
             {
             }
         }
@@ -42,10 +41,10 @@ namespace FluentAssertions.Analyzers
         
         protected override ExpressionSyntax GetNewExpression(ExpressionSyntax expression, FluentAssertionsDiagnosticProperties properties)
         {
-            var remove = new NodeReplacement.RemoveAndExtractArgumentsNodeReplacement("All");
-            var newStatement = GetNewExpression(expression, remove);
+            var remove = NodeReplacement.RemoveAndExtractArguments("All");
+            var newExpression = GetNewExpression(expression, remove);
 
-            return GetNewExpression(newStatement, new NodeReplacement.RenameAndPrependArgumentsNodeReplacement("BeTrue", "OnlyContain", remove.Arguments));
+            return GetNewExpression(newExpression, NodeReplacement.RenameAndPrependArguments("BeTrue", "OnlyContain", remove.Arguments));
         }
     }
 }

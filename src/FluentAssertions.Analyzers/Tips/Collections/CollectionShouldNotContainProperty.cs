@@ -1,6 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeFixes;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Generic;
@@ -10,12 +9,12 @@ using System.Composition;
 namespace FluentAssertions.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class CollectionShouldNotContainPropertyAnalyzer : FluentAssertionsAnalyzer
+    public class CollectionShouldNotContainPropertyAnalyzer : CollectionAnalyzer
     {
         public const string DiagnosticId = Constants.Tips.Collections.CollectionShouldNotContainProperty;
         public const string Category = Constants.Tips.Category;
 
-        public const string Message = "Use {0} .Should() followed by .NotContain() instead.";
+        public const string Message = "Use .Should().NotContain() instead.";
 
         protected override DiagnosticDescriptor Rule => new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
         protected override IEnumerable<FluentAssertionsCSharpSyntaxVisitor> Visitors
@@ -24,43 +23,28 @@ namespace FluentAssertions.Analyzers
             {
                 yield return new AnyShouldBeFalseSyntaxVisitor();
                 yield return new WhereShouldBeEmptySyntaxVisitor();
-                yield return new ShouldOnlyContainNotSyntaxVisitor();
+                // TODO: yield return new ShouldOnlyContainNotSyntaxVisitor();
             }
         }
 
-        public class AnyShouldBeFalseSyntaxVisitor : FluentAssertionsWithLambdaArgumentCSharpSyntaxVisitor
+        public class AnyShouldBeFalseSyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
         {
-            protected override string MethodContainingLambda => "Any";
-            public AnyShouldBeFalseSyntaxVisitor() : base("Any", "Should", "BeFalse")
-            {
-            }
-        }
-
-        public class WhereShouldBeEmptySyntaxVisitor : FluentAssertionsWithLambdaArgumentCSharpSyntaxVisitor
-        {
-            protected override string MethodContainingLambda => "Where";
-            public WhereShouldBeEmptySyntaxVisitor() : base("Where", "Should", "BeEmpty")
+            public AnyShouldBeFalseSyntaxVisitor() : base(MemberValidator.MathodContainingLambda("Any"), MemberValidator.Should, new MemberValidator("BeFalse"))
             {
             }
         }
 
-        public class ShouldOnlyContainNotSyntaxVisitor : FluentAssertionsWithLambdaArgumentCSharpSyntaxVisitor
+        public class WhereShouldBeEmptySyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
         {
-            protected override string MethodContainingLambda => "OnlyContain";
-            public override SimpleLambdaExpressionSyntax Lambda => ReverseLambda(base.Lambda);
-
-            public ShouldOnlyContainNotSyntaxVisitor() : base("Should", "OnlyContain")
+            public WhereShouldBeEmptySyntaxVisitor() : base(MemberValidator.MathodContainingLambda("Where"), MemberValidator.Should, new MemberValidator("BeEmpty"))
             {
             }
+        }
 
-            private SimpleLambdaExpressionSyntax ReverseLambda(SimpleLambdaExpressionSyntax lambda)
+        public class ShouldOnlyContainSyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
+        {
+            public ShouldOnlyContainSyntaxVisitor() : base(MemberValidator.Should, MemberValidator.MathodContainingLambda("OnlyContain"))
             {
-                if (lambda.Body is PrefixUnaryExpressionSyntax prefixUnary && prefixUnary.OperatorToken.IsKind(SyntaxKind.ExclamationToken))
-                {
-                    return lambda.WithBody(prefixUnary.Operand);
-                }
-
-                return lambda;
             }
         }
     }
@@ -74,22 +58,24 @@ namespace FluentAssertions.Analyzers
         {
             if (properties.VisitorName == nameof(CollectionShouldNotContainPropertyAnalyzer.AnyShouldBeFalseSyntaxVisitor))
             {
-                var remove = new NodeReplacement.RemoveAndExtractArgumentsNodeReplacement("Any");
-                var newStatement = GetNewExpression(expression, remove);
+                var remove = NodeReplacement.RemoveAndExtractArguments("Any");
+                var newExpression = GetNewExpression(expression, remove);
 
-                return GetNewExpression(newStatement, NodeReplacement.RenameAndPrependArguments("BeFalse", "NotContain", remove.Arguments));
+                return GetNewExpression(newExpression, NodeReplacement.RenameAndPrependArguments("BeFalse", "NotContain", remove.Arguments));
             }
             else if (properties.VisitorName == nameof(CollectionShouldNotContainPropertyAnalyzer.WhereShouldBeEmptySyntaxVisitor))
             {
-                var remove = new NodeReplacement.RemoveAndExtractArgumentsNodeReplacement("Where");
-                var newStatement = GetNewExpression(expression, remove);
+                var remove = NodeReplacement.RemoveAndExtractArguments("Where");
+                var newExpression = GetNewExpression(expression, remove);
 
-                return GetNewExpression(newStatement, NodeReplacement.RenameAndPrependArguments("BeEmpty", "NotContain", remove.Arguments));
+                return GetNewExpression(newExpression, NodeReplacement.RenameAndPrependArguments("BeEmpty", "NotContain", remove.Arguments));
             }
+            /*
             else if (properties.VisitorName == nameof(CollectionShouldNotContainPropertyAnalyzer.ShouldOnlyContainNotSyntaxVisitor))
             {
                 return GetNewExpression(expression, NodeReplacement.RenameAndNegateLambda("OnlyContain", "NotContain"));
             }
+            */
             throw new System.InvalidOperationException($"Invalid visitor name - {properties.VisitorName}");
         }
     }

@@ -9,12 +9,12 @@ using System.Composition;
 namespace FluentAssertions.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class CollectionShouldNotBeNullOrEmptyAnalyzer : FluentAssertionsAnalyzer
+    public class CollectionShouldNotBeNullOrEmptyAnalyzer : CollectionAnalyzer
     {
         public const string DiagnosticId = Constants.Tips.Collections.CollectionShouldNotBeNullOrEmpty;
         public const string Category = Constants.Tips.Category;
 
-        public const string Message = "Use {0} .Should() followed by .NotBeNullOrEmpty() instead.";
+        public const string Message = "Use .Should().NotBeNullOrEmpty() instead.";
 
         protected override DiagnosticDescriptor Rule => new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
 
@@ -29,13 +29,13 @@ namespace FluentAssertions.Analyzers
 
         public class ShouldNotBeNullAndNotBeEmptySyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
         {
-            public ShouldNotBeNullAndNotBeEmptySyntaxVisitor() : base("Should", "NotBeNull", "And", "NotBeEmpty")
+            public ShouldNotBeNullAndNotBeEmptySyntaxVisitor() : base(MemberValidator.Should, new MemberValidator("NotBeNull"), MemberValidator.And, new MemberValidator("NotBeEmpty"))
             {
             }
         }
         public class ShouldNotBeEmptyAndNotBeNullSyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
         {
-            public ShouldNotBeEmptyAndNotBeNullSyntaxVisitor() : base("Should", "NotBeEmpty", "And", "NotBeNull")
+            public ShouldNotBeEmptyAndNotBeNullSyntaxVisitor() : base(MemberValidator.Should, new MemberValidator("NotBeEmpty"), MemberValidator.And, new MemberValidator("NotBeNull"))
             {
             }
         }
@@ -62,19 +62,21 @@ namespace FluentAssertions.Analyzers
         {
             if (properties.VisitorName == nameof(CollectionShouldNotBeNullOrEmptyAnalyzer.ShouldNotBeNullAndNotBeEmptySyntaxVisitor))
             {
-                var remove = NodeReplacement.RemoveAndExtractArguments("NotBeEmpty");
-                var newStatement = GetNewExpression(expression, remove);
-
-                return GetNewExpression(newStatement, NodeReplacement.RenameAndPrependArguments("NotBeNull", "NotBeNullOrEmpty", remove.Arguments));
+                return GetCombinedAssertions(expression, "NotBeEmpty", "NotBeNull");
             }
             else if (properties.VisitorName == nameof(CollectionShouldNotBeNullOrEmptyAnalyzer.ShouldNotBeEmptyAndNotBeNullSyntaxVisitor))
             {
-                var remove = NodeReplacement.RemoveAndExtractArguments("NotBeNull");
-                var newStatement = GetNewExpression(expression, remove);
-
-                return GetNewExpression(newStatement, NodeReplacement.RenameAndPrependArguments("NotBeEmpty", "NotBeNullOrEmpty", remove.Arguments));
+                return GetCombinedAssertions(expression, "NotBeNull", "NotBeEmpty");
             }
             throw new System.InvalidOperationException($"Invalid visitor name - {properties.VisitorName}");
+        }
+
+        private ExpressionSyntax GetCombinedAssertions(ExpressionSyntax expression, string removeMethod, string renameMethod)
+        {
+            var remove = NodeReplacement.RemoveAndExtractArguments(removeMethod);
+            var newExpression = GetNewExpression(expression, NodeReplacement.RemoveMethodBefore(removeMethod), remove);
+
+            return GetNewExpression(newExpression, NodeReplacement.RenameAndPrependArguments(renameMethod, "NotBeNullOrEmpty", remove.Arguments));
         }
     }
 }

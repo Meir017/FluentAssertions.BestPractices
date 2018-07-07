@@ -9,41 +9,42 @@ using System.Composition;
 namespace FluentAssertions.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class CollectionShouldHaveCountAnalyzer : FluentAssertionsAnalyzer
+    public class CollectionShouldHaveCountAnalyzer : CollectionAnalyzer
     {
         public const string DiagnosticId = Constants.Tips.Collections.CollectionShouldHaveCount;
         public const string Category = Constants.Tips.Category;
 
-        public const string Message = "Use {0} .Should() followed by .HaveCount() instead.";
+        public const string Message = "Use .Should().HaveCount() instead.";
 
         protected override DiagnosticDescriptor Rule => new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
         protected override IEnumerable<FluentAssertionsCSharpSyntaxVisitor> Visitors
         {
             get
             {
+                yield return new CountShouldBe0SyntaxVisitor();
+                yield return new CountShouldBe1SyntaxVisitor();
                 yield return new CountShouldBeSyntaxVisitor();
             }
         }
 
-        private class CountShouldBeSyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
+        public class CountShouldBe0SyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
         {
-            public string CountArgument { get; private set; }
-
-            public override bool IsValid => base.IsValid && CountArgument != null;
-
-            public CountShouldBeSyntaxVisitor() : base("Count", "Should", "Be")
+            public CountShouldBe0SyntaxVisitor() : base(MemberValidator.MathodNotContainingLambda("Count"), MemberValidator.Should, MemberValidator.ArgumentIsLiteral("Be", 0))
             {
             }
+        }
 
-            public override ImmutableDictionary<string, string> ToDiagnosticProperties()
-                => base.ToDiagnosticProperties().Add(Constants.DiagnosticProperties.ArgumentString, CountArgument);
-
-            public override void VisitArgumentList(ArgumentListSyntax node)
+        public class CountShouldBe1SyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
+        {
+            public CountShouldBe1SyntaxVisitor() : base(MemberValidator.MathodNotContainingLambda("Count"), MemberValidator.Should, MemberValidator.ArgumentIsLiteral("Be", 1))
             {
-                if (!node.Arguments.Any()) return;
-                if (CurrentMethod != "Be") return;
+            }
+        }
 
-                CountArgument = node.Arguments[0].ToFullString();
+        public class CountShouldBeSyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
+        {
+            public CountShouldBeSyntaxVisitor() : base(MemberValidator.MathodNotContainingLambda("Count"), MemberValidator.Should, new MemberValidator("Be"))
+            {
             }
         }
     }
@@ -52,10 +53,22 @@ namespace FluentAssertions.Analyzers
     public class CollectionShouldHaveCountCodeFix : FluentAssertionsCodeFixProvider
     {
         public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(CollectionShouldHaveCountAnalyzer.DiagnosticId);
-        
+
         protected override ExpressionSyntax GetNewExpression(ExpressionSyntax expression, FluentAssertionsDiagnosticProperties properties)
         {
-            return GetNewExpression(expression, NodeReplacement.Remove("Count"), NodeReplacement.Rename("Be", "HaveCount"));
+            if (properties.VisitorName == nameof(CollectionShouldHaveCountAnalyzer.CountShouldBe0SyntaxVisitor))
+            {
+                return GetNewExpression(expression, NodeReplacement.Remove("Count"), NodeReplacement.RenameAndRemoveFirstArgument("Be", "BeEmpty"));
+            }
+            else if (properties.VisitorName == nameof(CollectionShouldHaveCountAnalyzer.CountShouldBe1SyntaxVisitor))
+            {
+                return GetNewExpression(expression, NodeReplacement.Remove("Count"), NodeReplacement.RenameAndRemoveFirstArgument("Be", "ContainSingle"));
+            }
+            else if (properties.VisitorName == nameof(CollectionShouldHaveCountAnalyzer.CountShouldBeSyntaxVisitor))
+            {
+                return GetNewExpression(expression, NodeReplacement.Remove("Count"), NodeReplacement.Rename("Be", "HaveCount"));
+            }
+            throw new System.InvalidOperationException($"Invalid visitor name - {properties.VisitorName}");
         }
     }
 }

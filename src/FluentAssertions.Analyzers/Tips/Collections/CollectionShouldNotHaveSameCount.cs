@@ -5,16 +5,17 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
+using System.Linq;
 
 namespace FluentAssertions.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class CollectionShouldNotHaveSameCountAnalyzer : FluentAssertionsAnalyzer
+    public class CollectionShouldNotHaveSameCountAnalyzer : CollectionAnalyzer
     {
         public const string DiagnosticId = Constants.Tips.Collections.CollectionShouldNotHaveSameCount;
         public const string Category = Constants.Tips.Category;
 
-        public const string Message = "Use {0} .Should() followed by .NotHaveSameCount() instead.";
+        public const string Message = "Use .Should().NotHaveSameCount() instead.";
 
         protected override DiagnosticDescriptor Rule => new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
         protected override IEnumerable<FluentAssertionsCSharpSyntaxVisitor> Visitors
@@ -24,20 +25,22 @@ namespace FluentAssertions.Analyzers
                 yield return new CountShouldNotBeOtherCollectionCountSyntaxVisitor();
             }
         }
-        private class CountShouldNotBeOtherCollectionCountSyntaxVisitor : FluentAssertionsWithArgumentCSharpSyntaxVisitor
+
+        public class CountShouldNotBeOtherCollectionCountSyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
         {
-            protected override string MethodContainingArgument => "NotBe";
-            public CountShouldNotBeOtherCollectionCountSyntaxVisitor() : base("Count", "Should", "NotBe")
+            public CountShouldNotBeOtherCollectionCountSyntaxVisitor() : base(MemberValidator.HasNoArguments("Count"), MemberValidator.Should, new MemberValidator("NotBe", HasArgumentInvokingCountMethod))
             {
             }
 
-            protected override ExpressionSyntax ModifyArgument(ExpressionSyntax expression)
+            private static bool HasArgumentInvokingCountMethod(SeparatedSyntaxList<ArgumentSyntax> arguments)
             {
-                var invocation = expression as InvocationExpressionSyntax;
-                var memberAccess = invocation?.Expression as MemberAccessExpressionSyntax;
-                var identifier = memberAccess?.Expression as IdentifierNameSyntax;
+                if (!arguments.Any()) return false;
 
-                return identifier;
+                return arguments.First().Expression is InvocationExpressionSyntax invocation
+                    && invocation.Expression is MemberAccessExpressionSyntax memberAccess
+                    && memberAccess.Name.Identifier.Text == nameof(Enumerable.Count)
+                    && memberAccess.Expression is IdentifierNameSyntax;
+
             }
         }
     }
@@ -46,10 +49,13 @@ namespace FluentAssertions.Analyzers
     public class CollectionShouldNotHaveSameCountCodeFix : FluentAssertionsCodeFixProvider
     {
         public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(CollectionShouldNotHaveSameCountAnalyzer.DiagnosticId);
-        
+
         protected override ExpressionSyntax GetNewExpression(ExpressionSyntax expression, FluentAssertionsDiagnosticProperties properties)
         {
-            return GetNewExpression(expression, NodeReplacement.Remove("Count"), new NodeReplacement.RenameAndRemoveInvocationOfMethodOnFirstArgumentNodeReplacement("NotBe", "NotHaveSameCount"));
+            return GetNewExpression(expression,
+                NodeReplacement.Remove("Count"),
+                NodeReplacement.RenameAndRemoveInvocationOfMethodOnFirstArgument("NotBe", "NotHaveSameCount")
+            );
         }
     }
 }

@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -61,17 +62,19 @@ namespace FluentAssertions.Analyzers
         {
             var visitor = new MemberAccessExpressionsCSharpSyntaxVisitor();
             expression.Accept(visitor);
-            var members =  new LinkedList<MemberAccessExpressionSyntax>(visitor.Members);
+            var members = new LinkedList<MemberAccessExpressionSyntax>(visitor.Members);
 
             var current = members.Last;
             while (current != null)
             {
-                if (replacement.IsValidNode(current.Value))
+                if (replacement.IsValidNode(current))
                 {
                     // extract custom data into the replacement object
                     replacement.ExtractValues(current.Value);
 
-                    return expression.ReplaceNode(replacement.ComputeOld(current), replacement.ComputeNew(current));
+                    var oldNode = replacement.ComputeOld(current);
+                    var newNode = replacement.ComputeNew(current);
+                    return expression.ReplaceNode(oldNode, newNode);
                 }
                 current = current.Previous;
             }
@@ -79,23 +82,12 @@ namespace FluentAssertions.Analyzers
             throw new System.InvalidOperationException("should not get here");
         }
 
-        protected class MemberAccessExpressionsCSharpSyntaxVisitor : CSharpSyntaxVisitor
+        protected ExpressionSyntax RenameIdentifier(ExpressionSyntax expression, string oldName, string newName)
         {
-            public List<MemberAccessExpressionSyntax> Members { get; } = new List<MemberAccessExpressionSyntax>();
-
-            public override void VisitInvocationExpression(InvocationExpressionSyntax node) => Visit(node.Expression);
-
-            public sealed override void VisitExpressionStatement(ExpressionStatementSyntax node) => Visit(node.Expression);
-
-
-            public sealed override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
-            {
-                if (node.Name.Identifier.Text != "And")
-                {
-                    Members.Add(node);
-                }
-                Visit(node.Expression);
-            }
+            var identifierNode = expression.DescendantNodes()
+                .OfType<IdentifierNameSyntax>()
+                .First(node => node.Identifier.Text == oldName);
+            return expression.ReplaceNode(identifierNode, identifierNode.WithIdentifier(SyntaxFactory.Identifier(newName).WithTriviaFrom(identifierNode.Identifier)));
         }
     }
 }

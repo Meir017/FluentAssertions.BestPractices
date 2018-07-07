@@ -10,12 +10,12 @@ using System.Composition;
 namespace FluentAssertions.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class DictionaryShouldContainKeyAndValueAnalyzer : FluentAssertionsAnalyzer
+    public class DictionaryShouldContainKeyAndValueAnalyzer : DictionaryAnalyzer
     {
         public const string DiagnosticId = Constants.Tips.Dictionaries.DictionaryShouldContainKeyAndValue;
         public const string Category = Constants.Tips.Category;
 
-        public const string Message = "Use {0} .Should() followed by .Contain() instead.";
+        public const string Message = "Use .Should().Contain() instead.";
 
         protected override DiagnosticDescriptor Rule => new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
         protected override IEnumerable<FluentAssertionsCSharpSyntaxVisitor> Visitors
@@ -27,31 +27,17 @@ namespace FluentAssertions.Analyzers
             }
         }
 
-        public abstract class ContainKeyValueSyntaxVisitor : FluentAssertionsWithArgumentsCSharpSyntaxVisitor
+        public class ShouldContainKeyAndContainValueSyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
         {
-            protected override bool AreArgumentsValid()
-            {
-                return Arguments.TryGetValue(("ContainKey", 0), out var key)
-                    && (key is IdentifierNameSyntax || key is LiteralExpressionSyntax)
 
-                    && Arguments.TryGetValue(("ContainValue", 0), out var value)
-                    && (value is IdentifierNameSyntax || value is LiteralExpressionSyntax);
-            }
-
-            protected ContainKeyValueSyntaxVisitor(params string[] requiredMethods) : base(requiredMethods)
+            public ShouldContainKeyAndContainValueSyntaxVisitor() : base(MemberValidator.Should, MemberValidator.ArgumentIsIdentifierOrLiteral("ContainKey"), MemberValidator.And, MemberValidator.ArgumentIsIdentifierOrLiteral("ContainValue"))
             {
             }
         }
-        public class ShouldContainKeyAndContainValueSyntaxVisitor : ContainKeyValueSyntaxVisitor
-        {
 
-            public ShouldContainKeyAndContainValueSyntaxVisitor() : base("Should", "ContainKey", "And", "ContainValue")
-            {
-            }
-        }
-        public class ShouldContainValueAndContainKeySyntaxVisitor : ContainKeyValueSyntaxVisitor
+        public class ShouldContainValueAndContainKeySyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
         {
-            public ShouldContainValueAndContainKeySyntaxVisitor() : base("Should", "ContainValue", "And", "ContainKey")
+            public ShouldContainValueAndContainKeySyntaxVisitor() : base(MemberValidator.Should, MemberValidator.ArgumentIsIdentifierOrLiteral("ContainValue"), MemberValidator.And, MemberValidator.ArgumentIsIdentifierOrLiteral("ContainKey"))
             {
             }
         }
@@ -80,21 +66,21 @@ namespace FluentAssertions.Analyzers
             {
                 var renameKeyArguments = NodeReplacement.RenameAndExtractArguments("ContainKey", "Contain");
                 var removeValueArguments = NodeReplacement.RemoveAndExtractArguments("ContainValue");
-                var newStatement = GetNewExpression(expression, renameKeyArguments, removeValueArguments);
+                var newExpression = GetNewExpression(expression, NodeReplacement.RemoveMethodBefore("ContainValue"), renameKeyArguments, removeValueArguments);
 
                 var newArguments = MergeContainKeyAndContainValueArguments(renameKeyArguments.Arguments, removeValueArguments.Arguments);
 
-                return GetNewExpression(newStatement, NodeReplacement.WithArguments("Contain", newArguments));
+                return GetNewExpression(newExpression, NodeReplacement.WithArguments("Contain", newArguments));
             }
             else if (properties.VisitorName == nameof(DictionaryShouldContainPairAnalyzer.ShouldContainValueAndContainKeySyntaxVisitor))
             {
                 var removeKeyArguments = NodeReplacement.RemoveAndExtractArguments("ContainKey");
                 var renameValueArguments = NodeReplacement.RenameAndExtractArguments("ContainValue", "Contain");
-                var newStatement = GetNewExpression(expression, removeKeyArguments, renameValueArguments);
+                var newExpression = GetNewExpression(expression, NodeReplacement.RemoveMethodBefore("ContainKey"), removeKeyArguments, renameValueArguments);
 
                 var newArguments = MergeContainKeyAndContainValueArguments(removeKeyArguments.Arguments, renameValueArguments.Arguments);
 
-                return GetNewExpression(newStatement, NodeReplacement.WithArguments("Contain", newArguments));
+                return GetNewExpression(newExpression, NodeReplacement.WithArguments("Contain", newArguments));
             }
             else
             {

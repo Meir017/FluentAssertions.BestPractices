@@ -3,7 +3,7 @@
   <metadata>
     <id>FluentAssertions.Analyzers</id>
     <title>Fluent Assertions Analyzers</title>
-    <version>0.5.1</version>
+    <version>0.11.3</version>
     <owners>Meir Blachman</owners>
     <authors>Meir Blachman</authors>
     <summary>
@@ -13,17 +13,17 @@
       Analyzers to help writing fluentassertions the right way.
     </description>
     <language>en-US</language>
-    <licenseUrl>https://github.com/Meir017/fluentassertions.analyzers/blob/master/LICENSE</licenseUrl>
-    <iconUrl>https://raw.githubusercontent.com/fluentassertions/fluentassertions/release-5.0/Src/FluentAssertions.png</iconUrl>
-    <projectUrl>https://github.com/Meir017/fluentassertions.analyzers</projectUrl>
+    <licenseUrl>https://github.com/fluentassertions/fluentassertions.analyzers/blob/master/LICENSE</licenseUrl>
+    <iconUrl>https://raw.githubusercontent.com/fluentassertions/fluentassertions.analyzers/master/assets/fluent_assertions.svg.png</iconUrl>
+    <projectUrl>https://github.com/fluentassertions/fluentassertions.analyzers</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <tags>FluentAssertions Analyzers</tags>
     <frameworkAssemblies>
       <frameworkAssembly assemblyName="System" targetFramework="" />
     </frameworkAssemblies>
-    <copyright>Copyright Meir Blachman 2017</copyright>
+    <copyright>Copyright Meir Blachman 2017-2018</copyright>
     <releaseNotes>
-      See https://github.com/Meir017/fluentassertions.analyzers/releases/
+      See https://github.com/fluentassertions/fluentassertions.analyzers/releases/
     </releaseNotes>
   </metadata>
   <files>

@@ -161,10 +161,10 @@ namespace FluentAssertions.Analyzers.Tests
             DiagnosticVerifier.VerifyCSharpDiagnosticUsingAllAnalyzers(source, new DiagnosticResult
             {
                 Id = diagnosticId,
-                Message = string.Format(message, GenerateCode.ActualVariableName),
+                Message = message,
                 Locations = new DiagnosticResultLocation[]
                 {
-                    new DiagnosticResultLocation("Test0.cs", 11,13)
+                    new DiagnosticResultLocation("Test0.cs", 12,13)
                 },
                 Severity = DiagnosticSeverity.Info
             });

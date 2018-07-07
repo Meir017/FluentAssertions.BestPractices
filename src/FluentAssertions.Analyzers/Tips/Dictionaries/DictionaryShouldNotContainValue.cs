@@ -9,25 +9,25 @@ using System.Composition;
 namespace FluentAssertions.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class DictionaryShouldNotContainValueAnalyzer : FluentAssertionsAnalyzer
+    public class DictionaryShouldNotContainValueAnalyzer : DictionaryAnalyzer
     {
         public const string DiagnosticId = Constants.Tips.Dictionaries.DictionaryShouldNotContainValue;
         public const string Category = Constants.Tips.Category;
 
-        public const string Message = "Use {0} .Should() followed by .NotContainValue() instead.";
+        public const string Message = "Use .Should().NotContainValue() instead.";
 
         protected override DiagnosticDescriptor Rule => new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
         protected override IEnumerable<FluentAssertionsCSharpSyntaxVisitor> Visitors
         {
             get
             {
-                yield return new ContainsValueShouldBeFalse();
+                yield return new ContainsValueShouldBeFalseSyntaxVisitor();
             }
         }
 
-        private class ContainsValueShouldBeFalse : FluentAssertionsCSharpSyntaxVisitor
+        public class ContainsValueShouldBeFalseSyntaxVisitor: FluentAssertionsCSharpSyntaxVisitor
         {
-            public ContainsValueShouldBeFalse() : base("ContainsValue", "Should", "BeFalse")
+            public ContainsValueShouldBeFalseSyntaxVisitor() : base(new MemberValidator("ContainsValue"), MemberValidator.Should, new MemberValidator("BeFalse"))
             {
             }
         }
@@ -41,9 +41,9 @@ namespace FluentAssertions.Analyzers
         protected override ExpressionSyntax GetNewExpression(ExpressionSyntax expression, FluentAssertionsDiagnosticProperties properties)
         {
             var remove = NodeReplacement.RemoveAndExtractArguments("ContainsValue");
-            var newStatement = GetNewExpression(expression, remove);
+            var newExpression = GetNewExpression(expression, remove);
 
-            return GetNewExpression(newStatement, NodeReplacement.RenameAndPrependArguments("BeFalse", "NotContainValue", remove.Arguments));
+            return GetNewExpression(newExpression, NodeReplacement.RenameAndPrependArguments("BeFalse", "NotContainValue", remove.Arguments));
         }
     }
 }

@@ -5,16 +5,17 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
+using System.Linq;
 
 namespace FluentAssertions.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class CollectionShouldHaveSameCountAnalyzer : FluentAssertionsAnalyzer
+    public class CollectionShouldHaveSameCountAnalyzer : CollectionAnalyzer
     {
         public const string DiagnosticId = Constants.Tips.Collections.CollectionShouldHaveSameCount;
         public const string Category = Constants.Tips.Category;
 
-        public const string Message = "Use {0} .Should() followed by .HaveSameCount() instead.";
+        public const string Message = "Use .Should().HaveSameCount() instead.";
 
         protected override DiagnosticDescriptor Rule => new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
         protected override IEnumerable<FluentAssertionsCSharpSyntaxVisitor> Visitors
@@ -25,20 +26,21 @@ namespace FluentAssertions.Analyzers
             }
         }
 
-        private class ShouldHaveCountOtherCollectionCountSyntaxVisitor : FluentAssertionsWithArgumentCSharpSyntaxVisitor
+        public class ShouldHaveCountOtherCollectionCountSyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
         {
-            protected override string MethodContainingArgument => "HaveCount";
-            public ShouldHaveCountOtherCollectionCountSyntaxVisitor() : base("Should", "HaveCount")
+            public ShouldHaveCountOtherCollectionCountSyntaxVisitor() : base(MemberValidator.Should, new MemberValidator("HaveCount", HasArgumentInvokingCountMethod))
             {
             }
 
-            protected override ExpressionSyntax ModifyArgument(ExpressionSyntax expression)
+            private static bool HasArgumentInvokingCountMethod(SeparatedSyntaxList<ArgumentSyntax> arguments)
             {
-                var invocation = expression as InvocationExpressionSyntax;
-                var memberAccess = invocation?.Expression as MemberAccessExpressionSyntax;
-                var identifier = memberAccess?.Expression as IdentifierNameSyntax;
+                if (!arguments.Any()) return false;
 
-                return identifier;
+                return arguments.First().Expression is InvocationExpressionSyntax invocation
+                    && invocation.Expression is MemberAccessExpressionSyntax memberAccess
+                    && memberAccess.Name.Identifier.Text == nameof(Enumerable.Count)
+                    && memberAccess.Expression is IdentifierNameSyntax;
+                    
             }
         }
     }
@@ -50,7 +52,7 @@ namespace FluentAssertions.Analyzers
 
         protected override ExpressionSyntax GetNewExpression(ExpressionSyntax expression, FluentAssertionsDiagnosticProperties properties)
         {
-            return GetNewExpression(expression, new NodeReplacement.RenameAndRemoveInvocationOfMethodOnFirstArgumentNodeReplacement("HaveCount", "HaveSameCount"));
+            return GetNewExpression(expression, NodeReplacement.RenameAndRemoveInvocationOfMethodOnFirstArgument("HaveCount", "HaveSameCount"));
         }
     }
 }

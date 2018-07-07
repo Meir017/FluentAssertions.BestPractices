@@ -9,12 +9,12 @@ using System.Composition;
 namespace FluentAssertions.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class CollectionShouldOnlyHaveUniqueItemsByComparerAnalyzer : FluentAssertionsAnalyzer
+    public class CollectionShouldOnlyHaveUniqueItemsByComparerAnalyzer : CollectionAnalyzer
     {
         public const string DiagnosticId = Constants.Tips.Collections.CollectionShouldOnlyHaveUniqueItemsByComparer;
         public const string Category = Constants.Tips.Category;
 
-        public const string Message = "Use {0} .Should() followed by .OnlyHaveUniqueItems() instead.";
+        public const string Message = "Use .Should().OnlyHaveUniqueItems() instead.";
 
         protected override DiagnosticDescriptor Rule => new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
 
@@ -26,10 +26,9 @@ namespace FluentAssertions.Analyzers
             }
         }
 
-        private class SelectShouldOnlyHaveUniqueItemsSyntaxVisitor : FluentAssertionsWithLambdaArgumentCSharpSyntaxVisitor
+        public class SelectShouldOnlyHaveUniqueItemsSyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
         {
-            protected override string MethodContainingLambda => "Select";
-            public SelectShouldOnlyHaveUniqueItemsSyntaxVisitor() : base("Select", "Should", "OnlyHaveUniqueItems")
+            public SelectShouldOnlyHaveUniqueItemsSyntaxVisitor() : base(MemberValidator.MathodContainingLambda("Select"), MemberValidator.Should, new MemberValidator("OnlyHaveUniqueItems"))
             {
             }
         }
@@ -43,9 +42,9 @@ namespace FluentAssertions.Analyzers
         protected override ExpressionSyntax GetNewExpression(ExpressionSyntax expression, FluentAssertionsDiagnosticProperties properties)
         {
             var remove = NodeReplacement.RemoveAndExtractArguments("Select");
-            var newStatement = GetNewExpression(expression, remove);
+            var newExpression = GetNewExpression(expression, remove);
 
-            return GetNewExpression(newStatement, NodeReplacement.PrependArguments("OnlyHaveUniqueItems", remove.Arguments));
+            return GetNewExpression(newExpression, NodeReplacement.PrependArguments("OnlyHaveUniqueItems", remove.Arguments));
         }
     }
 }

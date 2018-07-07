@@ -10,12 +10,12 @@ namespace FluentAssertions.Analyzers
 {
 
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class CollectionShouldNotBeEmptyAnalyzer : FluentAssertionsAnalyzer
+    public class CollectionShouldNotBeEmptyAnalyzer : CollectionAnalyzer
     {
         public const string DiagnosticId = Constants.Tips.Collections.CollectionsShouldNotBeEmpty;
         public const string Category = Constants.Tips.Category;
 
-        public const string Message = "Use {0} .Should() followed by .NotBeEmpty() instead.";
+        public const string Message = "Use .Should().NotBeEmpty() instead.";
 
         protected override DiagnosticDescriptor Rule => new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
 
@@ -27,11 +27,9 @@ namespace FluentAssertions.Analyzers
             }
         }
 
-        private class AnyShouldBeTrueSyntaxVisitor : FluentAssertionsWithoutLambdaArgumentCSharpSyntaxVisitor
+        public class AnyShouldBeTrueSyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
         {
-            protected override string MathodNotContainingLambda => "Any";
-
-            public AnyShouldBeTrueSyntaxVisitor() : base("Any", "Should", "BeTrue")
+            public AnyShouldBeTrueSyntaxVisitor() : base(MemberValidator.MathodNotContainingLambda("Any"), MemberValidator.Should, new MemberValidator("BeTrue"))
             {
             }
         }
@@ -41,16 +39,10 @@ namespace FluentAssertions.Analyzers
     public class CollectionShouldNotBeEmptyCodeFix : FluentAssertionsCodeFixProvider
     {
         public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(CollectionShouldNotBeEmptyAnalyzer.DiagnosticId);
-        
+
         protected override ExpressionSyntax GetNewExpression(ExpressionSyntax expression, FluentAssertionsDiagnosticProperties properties)
         {
-            NodeReplacement[] replacements =
-            {
-                NodeReplacement.Remove("Any"),
-                NodeReplacement.Rename("BeTrue", "NotBeEmpty")
-            };
-
-            return GetNewExpression(expression, replacements);
+            return GetNewExpression(expression, NodeReplacement.Remove("Any"), NodeReplacement.Rename("BeTrue", "NotBeEmpty"));
         }
     }
 }

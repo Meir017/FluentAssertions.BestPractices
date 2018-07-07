@@ -10,12 +10,12 @@ using System.Composition;
 namespace FluentAssertions.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class CollectionShouldBeEmptyAnalyzer : FluentAssertionsAnalyzer
+    public class CollectionShouldBeEmptyAnalyzer : CollectionAnalyzer
     {
         public const string DiagnosticId = Constants.Tips.Collections.CollectionsShouldBeEmpty;
         public const string Category = Constants.Tips.Category;
 
-        public const string Message = "Use {0} .Should() followed by .BeEmpty() instead.";
+        public const string Message = "Use .Should().BeEmpty() instead.";
 
         protected override DiagnosticDescriptor Rule => new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
         protected override IEnumerable<FluentAssertionsCSharpSyntaxVisitor> Visitors
@@ -27,31 +27,24 @@ namespace FluentAssertions.Analyzers
             }
         }
 
-        public class AnyShouldBeFalseSyntaxVisitor : FluentAssertionsWithoutLambdaArgumentCSharpSyntaxVisitor
+        public class AnyShouldBeFalseSyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
         {
-            protected override string MathodNotContainingLambda => "Any";
-
-            public AnyShouldBeFalseSyntaxVisitor() : base("Any", "Should", "BeFalse")
+            public AnyShouldBeFalseSyntaxVisitor() : base(MemberValidator.MathodNotContainingLambda("Any"), MemberValidator.Should, new MemberValidator("BeFalse"))
             {
             }
         }
+
         public class ShouldHaveCount0SyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
         {
-            private bool _haveCountMethodHas0Argument;
-
-            public override bool IsValid => base.IsValid && _haveCountMethodHas0Argument;
-
-            public ShouldHaveCount0SyntaxVisitor() : base("Should", "HaveCount")
+            public ShouldHaveCount0SyntaxVisitor() : base(MemberValidator.Should, new MemberValidator("HaveCount", HaveCountArgumentsValidator))
             {
             }
 
-            public override void VisitArgumentList(ArgumentListSyntax node)
+            private static bool HaveCountArgumentsValidator(SeparatedSyntaxList<ArgumentSyntax> arguments)
             {
-                if (!node.Arguments.Any()) return;
-                if (CurrentMethod != "HaveCount") return;
+                if (!arguments.Any()) return false;
 
-                _haveCountMethodHas0Argument =
-                    node.Arguments[0].Expression is LiteralExpressionSyntax literal
+                return arguments[0].Expression is LiteralExpressionSyntax literal
                     && literal.Token.Value is int argument
                     && argument == 0;
             }
@@ -62,7 +55,7 @@ namespace FluentAssertions.Analyzers
     public class CollectionShouldBeEmptyCodeFix : FluentAssertionsCodeFixProvider
     {
         public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(CollectionShouldBeEmptyAnalyzer.DiagnosticId);
-        
+
         protected override ExpressionSyntax GetNewExpression(ExpressionSyntax expression, FluentAssertionsDiagnosticProperties properties)
         {
             switch (properties.VisitorName)
@@ -78,7 +71,7 @@ namespace FluentAssertions.Analyzers
 
         private class HaveCountNodeReplacement : NodeReplacement
         {
-            public override bool IsValidNode(MemberAccessExpressionSyntax node) => node.Name.Identifier.Text == "HaveCount";
+            public override bool IsValidNode(LinkedListNode<MemberAccessExpressionSyntax> listNode) => listNode.Value.Name.Identifier.Text == "HaveCount";
             public override SyntaxNode ComputeOld(LinkedListNode<MemberAccessExpressionSyntax> listNode) => listNode.Value.Parent;
             public override SyntaxNode ComputeNew(LinkedListNode<MemberAccessExpressionSyntax> listNode)
             {

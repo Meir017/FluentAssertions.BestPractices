@@ -5,16 +5,17 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
+using System.Linq;
 
 namespace FluentAssertions.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class CollectionShouldOnlyHaveUniqueItemsAnalyzer : FluentAssertionsAnalyzer
+    public class CollectionShouldOnlyHaveUniqueItemsAnalyzer : CollectionAnalyzer
     {
         public const string DiagnosticId = Constants.Tips.Collections.CollectionShouldOnlyHaveUniqueItems;
         public const string Category = Constants.Tips.Category;
 
-        public const string Message = "Use {0} .Should() followed by ### instead.";
+        public const string Message = "Use .Should().OnlyHaveUniqueItems() instead.";
 
         protected override DiagnosticDescriptor Rule => new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
 
@@ -26,26 +27,24 @@ namespace FluentAssertions.Analyzers
             }
         }
 
-        private class ShouldHaveSameCountThisCollectionDistinctSyntaxVisitor : FluentAssertionsWithArgumentCSharpSyntaxVisitor
+        public class ShouldHaveSameCountThisCollectionDistinctSyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
         {
-            protected override string MethodContainingArgument => "HaveSameCount";
-            public ShouldHaveSameCountThisCollectionDistinctSyntaxVisitor() : base("Should", "HaveSameCount")
+            public ShouldHaveSameCountThisCollectionDistinctSyntaxVisitor() : base(MemberValidator.Should, new MemberValidator("HaveSameCount", ArgumentInvokesDistinctMethod))
             {
             }
 
-            protected override ExpressionSyntax ModifyArgument(ExpressionSyntax expression)
+            private static bool ArgumentInvokesDistinctMethod(SeparatedSyntaxList<ArgumentSyntax> arguments)
             {
-                var visitor = new CollectionDistinctSyntaxVisitor();
-                expression.Accept(visitor);
+                if (!arguments.Any()) return false;
 
-                return (visitor.IsValid && visitor.VariableName == VariableName) ? expression : null;
-            }
-
-            private class CollectionDistinctSyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
-            {
-                public CollectionDistinctSyntaxVisitor() : base("Distinct")
+                if (arguments.First().Expression is InvocationExpressionSyntax invocation)
                 {
+                    var visitor = new FluentAssertionsCSharpSyntaxVisitor(new MemberValidator(nameof(Enumerable.Distinct)));
+                    invocation.Accept(visitor);
+
+                    return visitor.IsValid(invocation) && VariableNameExtractor.ExtractVariabeName(arguments.First()) == VariableNameExtractor.ExtractVariabeName(invocation);
                 }
+                return false;
             }
         }
     }

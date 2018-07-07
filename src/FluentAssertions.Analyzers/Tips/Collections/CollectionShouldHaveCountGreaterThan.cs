@@ -9,12 +9,12 @@ using System.Composition;
 namespace FluentAssertions.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class CollectionShouldHaveCountGreaterThanAnalyzer : FluentAssertionsAnalyzer
+    public class CollectionShouldHaveCountGreaterThanAnalyzer : CollectionAnalyzer
     {
         public const string DiagnosticId = Constants.Tips.Collections.CollectionShouldHaveCountGreaterThan;
         public const string Category = Constants.Tips.Category;
 
-        public const string Message = "Use {0} .Should() followed by .HaveCountGreaterThan() instead.";
+        public const string Message = "Use .Should().HaveCountGreaterThan() instead.";
 
         protected override DiagnosticDescriptor Rule => new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
         protected override IEnumerable<FluentAssertionsCSharpSyntaxVisitor> Visitors
@@ -25,11 +25,9 @@ namespace FluentAssertions.Analyzers
             }
         }
 
-        private class CountShouldBeGreaterThanSyntaxVisitor : FluentAssertionsWithArgumentCSharpSyntaxVisitor
+        public class CountShouldBeGreaterThanSyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
         {
-            protected override string MethodContainingArgument => "BeGreaterThan";
-
-            public CountShouldBeGreaterThanSyntaxVisitor() : base("Count", "Should", "BeGreaterThan")
+            public CountShouldBeGreaterThanSyntaxVisitor() : base(new MemberValidator("Count"), MemberValidator.Should, new MemberValidator("BeGreaterThan"))
             {
             }
         }

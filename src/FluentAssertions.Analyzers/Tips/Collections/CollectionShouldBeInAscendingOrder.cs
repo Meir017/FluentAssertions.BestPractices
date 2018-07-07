@@ -9,12 +9,12 @@ using System.Composition;
 namespace FluentAssertions.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class CollectionShouldBeInAscendingOrderAnalyzer : FluentAssertionsAnalyzer
+    public class CollectionShouldBeInAscendingOrderAnalyzer : CollectionAnalyzer
     {
         public const string DiagnosticId = Constants.Tips.Collections.CollectionShouldBeInAscendingOrder;
         public const string Category = Constants.Tips.Category;
 
-        public const string Message = "Use {0} .Should() followed by .BeInAscendingOrder() instead.";
+        public const string Message = "Use .Should().BeInAscendingOrder() instead.";
 
         protected override DiagnosticDescriptor Rule => new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
         protected override IEnumerable<FluentAssertionsCSharpSyntaxVisitor> Visitors
@@ -24,28 +24,11 @@ namespace FluentAssertions.Analyzers
                 yield return new OrderByShouldEqualSyntaxVisitor();
             }
         }
-        private class OrderByShouldEqualSyntaxVisitor : FluentAssertionsWithLambdaArgumentCSharpSyntaxVisitor
+
+        public class OrderByShouldEqualSyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
         {
-            private bool _argumentIsSelf;
-            protected override string MethodContainingLambda => "OrderBy";
-
-            public override bool IsValid => base.IsValid && _argumentIsSelf;
-
-            public OrderByShouldEqualSyntaxVisitor() : base("OrderBy", "Should", "Equal")
+            public OrderByShouldEqualSyntaxVisitor() : base(MemberValidator.MathodContainingLambda("OrderBy"), MemberValidator.Should, MemberValidator.ArgumentIsVariable("Equal"))
             {
-            }
-
-            public override void VisitArgumentList(ArgumentListSyntax node)
-            {
-                if (!node.Arguments.Any()) return;
-                if (CurrentMethod != "Equal")
-                {
-                    base.VisitArgumentList(node);
-                    return;
-                }
-
-                _argumentIsSelf = node.Arguments[0].Expression is IdentifierNameSyntax identifier
-                    && identifier.Identifier.Text == VariableName;
             }
         }
     }
@@ -54,15 +37,15 @@ namespace FluentAssertions.Analyzers
     public class CollectionShouldBeInAscendingOrderCodeFix : FluentAssertionsCodeFixProvider
     {
         public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(CollectionShouldBeInAscendingOrderAnalyzer.DiagnosticId);
-        
+
         protected override ExpressionSyntax GetNewExpression(ExpressionSyntax expression, FluentAssertionsDiagnosticProperties properties)
         {
             var remove = NodeReplacement.RemoveAndExtractArguments("OrderBy");
-            var newStatement = GetNewExpression(expression, remove);
+            var newExpression = GetNewExpression(expression, remove);
 
-            newStatement = GetNewExpression(newStatement, NodeReplacement.RenameAndRemoveFirstArgument("Equal", "BeInAscendingOrder"));
+            newExpression = GetNewExpression(newExpression, NodeReplacement.RenameAndRemoveFirstArgument("Equal", "BeInAscendingOrder"));
 
-            return GetNewExpression(newStatement, NodeReplacement.PrependArguments("BeInAscendingOrder", remove.Arguments));
+            return GetNewExpression(newExpression, NodeReplacement.PrependArguments("BeInAscendingOrder", remove.Arguments));
         }
     }
 }

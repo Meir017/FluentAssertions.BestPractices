@@ -5,40 +5,24 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
+using System.Linq;
 
 namespace FluentAssertions.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class CollectionShouldHaveElementAt0NullAnalyzer : FluentAssertionsAnalyzer
+    public class CollectionShouldHaveElementAt0NullAnalyzer : CollectionAnalyzer
     {
         public const string DiagnosticId = Constants.Tips.Collections.CollectionShouldHaveElementAt0Null;
         public const string Category = Constants.Tips.Category;
 
-        public const string Message = "Use {0} .Should() followed by ### instead.";
+        public const string Message = "TODO";
+
+        protected override IEnumerable<FluentAssertionsCSharpSyntaxVisitor> Visitors { get; } = Enumerable.Empty<FluentAssertionsCSharpSyntaxVisitor>();
 
         protected override DiagnosticDescriptor Rule => new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
 
-        protected override Diagnostic AnalyzeExpression(ExpressionSyntax expression)
+        protected override Diagnostic AnalyzeExpression(ExpressionSyntax expression, SemanticModel semanticModel)
         {
-            return null;
-            var visitor = new CollectionShouldHaveElementAt0NullSyntaxVisitor();
-            expression.Accept(visitor);
-
-            if (visitor.IsValid)
-            {
-                var properties = new Dictionary<string, string>
-                {
-                    [Constants.DiagnosticProperties.VariableName] = visitor.VariableName,
-                    [Constants.DiagnosticProperties.Title] = Title
-                }.ToImmutableDictionary();
-				throw new System.NotImplementedException();
-
-                return Diagnostic.Create(
-                    descriptor: Rule,
-                    location: expression.GetLocation(),
-                    properties: properties,
-                    messageArgs: visitor.VariableName);
-            }
             return null;
         }
     }
@@ -51,14 +35,6 @@ namespace FluentAssertions.Analyzers
         protected override ExpressionSyntax GetNewExpression(ExpressionSyntax expression, FluentAssertionsDiagnosticProperties properties)
         {
             throw new System.NotImplementedException();
-        }
-    }
-
-    public class CollectionShouldHaveElementAt0NullSyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
-    {
-        public CollectionShouldHaveElementAt0NullSyntaxVisitor() : base("###")
-        {
-			throw new System.NotImplementedException();
         }
     }
 }

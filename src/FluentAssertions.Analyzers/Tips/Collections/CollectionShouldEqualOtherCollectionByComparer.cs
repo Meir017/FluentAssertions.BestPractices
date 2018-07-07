@@ -10,12 +10,12 @@ using System.Composition;
 namespace FluentAssertions.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class CollectionShouldEqualOtherCollectionByComparerAnalyzer : FluentAssertionsAnalyzer
+    public class CollectionShouldEqualOtherCollectionByComparerAnalyzer : CollectionAnalyzer
     {
         public const string DiagnosticId = Constants.Tips.Collections.CollectionShouldEqualOtherCollectionByComparer;
         public const string Category = Constants.Tips.Category;
 
-        public const string Message = "Use {0} .Should() followed by .Equal() instead.";
+        public const string Message = "Use .Should().Equal() instead.";
 
         protected override DiagnosticDescriptor Rule => new DiagnosticDescriptor(DiagnosticId, Title, Message, Category, DiagnosticSeverity.Info, true);
 
@@ -27,48 +27,19 @@ namespace FluentAssertions.Analyzers
             }
         }
 
-        private class SelectShouldEqualOtherCollectionSelectSyntaxVisitor : FluentAssertionsWithArgumentsCSharpSyntaxVisitor
+        public class SelectShouldEqualOtherCollectionSelectSyntaxVisitor : FluentAssertionsCSharpSyntaxVisitor
         {
-            private ExpressionSyntax _lambdaArgument;
-            private string _otherVariable;
-
-            protected override bool AreArgumentsValid()
-            {
-                if (Arguments.TryGetValue(("Select", 0), out var selectArgument) && selectArgument is SimpleLambdaExpressionSyntax select
-                    && Arguments.TryGetValue(("Equal", 0), out var expectedArgument) && expectedArgument is InvocationExpressionSyntax expected)
-                {
-                    var visitor = new SelectSyntaxVisitor();
-                    expected.Accept(visitor);
-
-                    if (visitor.IsValid)
-                    {
-                        _otherVariable = visitor.VariableName;
-                        _lambdaArgument = SyntaxFactory.ParenthesizedLambdaExpression(
-                            parameterList: SyntaxFactory.ParameterList().AddParameters(select.Parameter, visitor.Lambda.Parameter),
-                            body: SyntaxFactory.BinaryExpression(SyntaxKind.EqualsExpression,
-                                left: (ExpressionSyntax)select.Body,
-                                right: (ExpressionSyntax)visitor.Lambda.Body)
-                        ).NormalizeWhitespace();
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-            public SelectShouldEqualOtherCollectionSelectSyntaxVisitor() : base("Select", "Should", "Equal")
+            public SelectShouldEqualOtherCollectionSelectSyntaxVisitor()
+                : base(MemberValidator.MathodContainingLambda("Select"), MemberValidator.Should, new MemberValidator("Equal", MathodContainingArgumentInvokingLambda))
             {
             }
 
-            public override ImmutableDictionary<string, string> ToDiagnosticProperties() => base.ToDiagnosticProperties()
-                .Add(Constants.DiagnosticProperties.LambdaString, _lambdaArgument.ToFullString())
-                .Add(Constants.DiagnosticProperties.ArgumentString, _otherVariable);
-
-            private class SelectSyntaxVisitor : FluentAssertionsWithLambdaArgumentCSharpSyntaxVisitor
+            private static bool MathodContainingArgumentInvokingLambda(SeparatedSyntaxList<ArgumentSyntax> arguments)
             {
-                protected override string MethodContainingLambda => "Select";
-                public SelectSyntaxVisitor() : base("Select")
-                {
-                }
+                if (!arguments.Any()) return false;
+
+                return arguments[0].Expression is InvocationExpressionSyntax invocation
+                    && MemberValidator.MethodContainingLambdaPredicate(invocation.ArgumentList.Arguments);
             }
         }
     }
@@ -77,14 +48,14 @@ namespace FluentAssertions.Analyzers
     public class CollectionShouldEqualOtherCollectionByComparerCodeFix : FluentAssertionsCodeFixProvider
     {
         public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(CollectionShouldEqualOtherCollectionByComparerAnalyzer.DiagnosticId);
-        
+
         protected override ExpressionSyntax GetNewExpression(ExpressionSyntax expression, FluentAssertionsDiagnosticProperties properties)
         {
             var removeMethodContainingFirstLambda = NodeReplacement.RemoveAndExtractArguments("Select");
-            var newStatement = GetNewExpression(expression, removeMethodContainingFirstLambda);
+            var newExpression = GetNewExpression(expression, removeMethodContainingFirstLambda);
 
             var removeArgument = NodeReplacement.RemoveFirstArgument("Equal");
-            newStatement = GetNewExpression(newStatement, removeArgument);
+            newExpression = GetNewExpression(newExpression, removeArgument);
 
             var argumentInvocation = (InvocationExpressionSyntax)removeArgument.Argument.Expression;
             var identifier = ((MemberAccessExpressionSyntax)argumentInvocation.Expression).Expression;
@@ -97,7 +68,7 @@ namespace FluentAssertions.Analyzers
                 .Add(removeArgument.Argument.WithExpression(CombineLambdas(firstLambda, secondLambda).NormalizeWhitespace()
             ));
 
-            return GetNewExpression(newStatement, NodeReplacement.PrependArguments("Equal", newArguments));
+            return GetNewExpression(newExpression, NodeReplacement.PrependArguments("Equal", newArguments));
         }
 
         private ParenthesizedLambdaExpressionSyntax CombineLambdas(SimpleLambdaExpressionSyntax left, SimpleLambdaExpressionSyntax right) => SyntaxFactory.ParenthesizedLambdaExpression(
