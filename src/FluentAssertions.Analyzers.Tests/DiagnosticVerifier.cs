@@ -34,6 +34,7 @@ namespace FluentAssertions.Analyzers.Tests
                 typeof(Compilation), // Microsoft.CodeAnalysis
                 typeof(AssertionScope), // FluentAssertions.Core
                 typeof(AssertionExtensions), // FluentAssertions
+                typeof(Microsoft.VisualStudio.TestTools.UnitTesting.Assert) // MsTest
             }.Select(type => type.GetTypeInfo().Assembly.Location)
             .Append(GetSystemAssemblyPathByName("System.Threading.Tasks.dll"))
             .Append(GetSystemAssemblyPathByName("System.Runtime.dll"))

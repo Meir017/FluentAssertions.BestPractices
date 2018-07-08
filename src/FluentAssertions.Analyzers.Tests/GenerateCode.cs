@@ -122,6 +122,24 @@ namespace FluentAssertions.Analyzers.Tests
             .AppendLine("}")
             .ToString();
 
+        public static string MsTestAssertion(string methodArguments, string assertion) => new StringBuilder()
+            .AppendLine("using System;")
+            .AppendLine("using FluentAssertions;")
+            .AppendLine("using FluentAssertions.Extensions;")
+            .AppendLine("using Microsoft.VisualStudio.TestTools.UnitTesting;")
+            .AppendLine("namespace TestNamespace")
+            .AppendLine("{")
+            .AppendLine("    class TestClass")
+            .AppendLine("    {")
+            .AppendLine($"        void TestMethod({methodArguments})")
+            .AppendLine("        {")
+            .AppendLine($"            {assertion}")
+            .AppendLine("        }")
+            .AppendLine("    }")
+            .AppendMainMethod()
+            .AppendLine("}")
+            .ToString();
+
         private static StringBuilder AppendMainMethod(this StringBuilder builder) => builder
             .AppendLine("    class Program")
             .AppendLine("    {")

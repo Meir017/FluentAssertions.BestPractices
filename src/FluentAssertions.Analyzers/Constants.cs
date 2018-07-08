@@ -83,6 +83,11 @@ namespace FluentAssertions.Analyzers
                 public const string ExceptionShouldThrowWithMessage = nameof(ExceptionShouldThrowWithMessage);
                 public const string ExceptionShouldThrowWithInnerException = nameof(ExceptionShouldThrowWithInnerException);
             }
+
+            public static class MsTest
+            {
+                public const string AssertIsTrue = nameof(AssertIsTrue);
+            }
         }
 
         public static class CodeSmell

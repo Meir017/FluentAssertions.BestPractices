@@ -54,6 +54,7 @@ namespace FluentAssertions.Analyzers
 
         private Diagnostic AnalyzeExpression(ExpressionSyntax expression)
         {
+            return null;
             foreach (var visitor in Visitors)
             {
                 expression.Accept(visitor);
