@@ -83,6 +83,38 @@ namespace FluentAssertions.Analyzers
                 public const string ExceptionShouldThrowWithMessage = nameof(ExceptionShouldThrowWithMessage);
                 public const string ExceptionShouldThrowWithInnerException = nameof(ExceptionShouldThrowWithInnerException);
             }
+
+            public static class MsTest
+            {
+                public const string AssertIsTrue = nameof(AssertIsTrue);
+                public const string AssertIsFalse = nameof(AssertIsFalse);
+                public const string AssertIsNotNull = nameof(AssertIsNotNull);
+                public const string AssertIsNull = nameof(AssertIsNull);
+                public const string AssertIsInstanceOfType = nameof(AssertIsInstanceOfType);
+                public const string AssertIsNotInstanceOfType = nameof(AssertIsNotInstanceOfType);
+                public const string AssertAreEqual = nameof(AssertAreEqual);
+                public const string AssertAreNotEqual = nameof(AssertAreNotEqual);
+                public const string AssertAreSame = nameof(AssertAreSame);
+                public const string AssertAreNotSame = nameof(AssertAreNotSame);
+                public const string AssertThrowsException = nameof(AssertThrowsException);
+                public const string AssertThrowsExceptionAsync = nameof(AssertThrowsExceptionAsync);
+                public const string StringAssertContains = nameof(StringAssertContains);
+                public const string StringAssertStartsWith = nameof(StringAssertStartsWith);
+                public const string StringAssertEndsWith = nameof(StringAssertEndsWith);
+                public const string StringAssertMatches = nameof(StringAssertMatches);
+                public const string StringAssertDoesNotMatch = nameof(StringAssertDoesNotMatch);
+                public const string CollectionAssertAllItemsAreInstancesOfType = nameof(CollectionAssertAllItemsAreInstancesOfType);
+                public const string CollectionAssertAreEqual = nameof(CollectionAssertAreEqual);
+                public const string CollectionAssertAreNotEqual = nameof(CollectionAssertAreNotEqual);
+                public const string CollectionAssertAreEquivalent = nameof(CollectionAssertAreEquivalent);
+                public const string CollectionAssertAreNotEquivalent = nameof(CollectionAssertAreNotEquivalent);
+                public const string CollectionAssertAllItemsAreNotNull = nameof(CollectionAssertAllItemsAreNotNull);
+                public const string CollectionAssertAllItemsAreUnique = nameof(CollectionAssertAllItemsAreUnique);
+                public const string CollectionAssertContains = nameof(CollectionAssertContains);
+                public const string CollectionAssertDoesNotContain = nameof(CollectionAssertDoesNotContain);
+                public const string CollectionAssertIsSubsetOf = nameof(CollectionAssertIsSubsetOf);
+                public const string CollectionAssertIsNotSubsetOf = nameof(CollectionAssertIsNotSubsetOf);
+            }
         }
 
         public static class CodeSmell

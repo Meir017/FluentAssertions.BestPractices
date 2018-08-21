@@ -47,7 +47,7 @@ namespace FluentAssertions.Analyzers
 
         protected abstract ExpressionSyntax GetNewExpression(ExpressionSyntax expression, FluentAssertionsDiagnosticProperties properties);
 
-        protected ExpressionSyntax GetNewExpression(ExpressionSyntax expression, params NodeReplacement[] replacements)
+        protected static ExpressionSyntax GetNewExpression(ExpressionSyntax expression, params NodeReplacement[] replacements)
         {
             var newStatement = expression;
             foreach (var replacement in replacements)
@@ -58,7 +58,7 @@ namespace FluentAssertions.Analyzers
             return newStatement;
         }
 
-        protected ExpressionSyntax GetNewExpression(ExpressionSyntax expression, NodeReplacement replacement)
+        protected static ExpressionSyntax GetNewExpression(ExpressionSyntax expression, NodeReplacement replacement)
         {
             var visitor = new MemberAccessExpressionsCSharpSyntaxVisitor();
             expression.Accept(visitor);
@@ -82,12 +82,20 @@ namespace FluentAssertions.Analyzers
             throw new System.InvalidOperationException("should not get here");
         }
 
-        protected ExpressionSyntax RenameIdentifier(ExpressionSyntax expression, string oldName, string newName)
+        protected static ExpressionSyntax RenameIdentifier(ExpressionSyntax expression, string oldName, string newName)
         {
             var identifierNode = expression.DescendantNodes()
                 .OfType<IdentifierNameSyntax>()
                 .First(node => node.Identifier.Text == oldName);
             return expression.ReplaceNode(identifierNode, identifierNode.WithIdentifier(SyntaxFactory.Identifier(newName).WithTriviaFrom(identifierNode.Identifier)));
+        }
+
+        protected static ExpressionSyntax ReplaceIdentifier(ExpressionSyntax expression, string name, ExpressionSyntax identifierReplacement)
+        {
+            var identifierNode = expression.DescendantNodes()
+                .OfType<IdentifierNameSyntax>()
+                .First(node => node.Identifier.Text == name);
+            return expression.ReplaceNode(identifierNode, identifierReplacement.WithTriviaFrom(identifierNode));
         }
     }
 }

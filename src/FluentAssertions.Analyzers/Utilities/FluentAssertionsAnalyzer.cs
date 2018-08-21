@@ -29,6 +29,8 @@ namespace FluentAssertions.Analyzers
             var method = context.CodeBlock as MethodDeclarationSyntax;
             if (method == null) return;
 
+            if (!ShouldAnalyzeMethod(method)) return;
+
             if (method.Body != null)
             {
                 foreach (var statement in method.Body.Statements.OfType<ExpressionStatementSyntax>())
@@ -50,6 +52,8 @@ namespace FluentAssertions.Analyzers
                 }
             }
         }
+
+        protected virtual bool ShouldAnalyzeMethod(MethodDeclarationSyntax method) => true;
 
         protected virtual bool ShouldAnalyzeVariableType(ITypeSymbol type) => true;
 
