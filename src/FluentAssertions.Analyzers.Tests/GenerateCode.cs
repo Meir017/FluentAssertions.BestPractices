@@ -140,6 +140,23 @@ namespace FluentAssertions.Analyzers.Tests
             .AppendLine("}")
             .ToString();
 
+        public static string ObjectStatement(string statement) => new StringBuilder()
+            .AppendLine("using System;")
+            .AppendLine("using System.Threading.Tasks;")
+            .AppendLine("using FluentAssertions;using FluentAssertions.Extensions;")
+            .AppendLine("namespace TestNamespace")
+            .AppendLine("{")
+            .AppendLine("    class TestClass")
+            .AppendLine("    {")
+            .AppendLine("        void TestMethod(object actual, object expected)")
+            .AppendLine("        {")
+            .AppendLine($"            {statement}")
+            .AppendLine("        }")
+            .AppendLine("    }")
+            .AppendMainMethod()
+            .AppendLine("}")
+            .ToString();
+
         private static StringBuilder AppendMainMethod(this StringBuilder builder) => builder
             .AppendLine("    class Program")
             .AppendLine("    {")

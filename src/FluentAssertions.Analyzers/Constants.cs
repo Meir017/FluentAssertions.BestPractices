@@ -91,6 +91,7 @@ namespace FluentAssertions.Analyzers
 
             public const string NullConditionalAssertion = nameof(NullConditionalAssertion);
             public const string AsyncVoid = nameof(AsyncVoid);
+            public const string ShouldEquals = nameof(ShouldEquals);
         }
     }
 }
