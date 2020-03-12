@@ -1,3 +1,4 @@
+using System;
 using Microsoft.CodeAnalysis;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -380,6 +381,93 @@ namespace FluentAssertions.Analyzers.Tests
         [Implemented]
         public void CollectionShouldContainSingle_TestCodeFix(string oldAssertion, string newAssertion) => VerifyCSharpFixCodeBlock<CollectionShouldContainSingleCodeFix, CollectionShouldContainSingleAnalyzer>(oldAssertion, newAssertion);
 
+        [TestMethod]
+        public void CollectionShouldContainSingle_XmlNodeListShouldNotProduceInfo()
+        {
+            var sourceAssertion = @"
+                System.Xml.XmlNodeList childNodes = new System.Xml.XmlDocument().ChildNodes;
+                childNodes.Should().HaveCount(1);";
+
+            var source = GenerateCode.EnumerableCodeBlockAssertion(sourceAssertion);
+            DiagnosticVerifier.VerifyCSharpDiagnosticUsingAllAnalyzers(source);
+        }
+
+        [TestMethod]
+        public void CollectionShouldContainSingle_ContainSingleDoesNotCompileOnXmlNodeList()
+        {
+            var sourceAssertion = @"
+                System.Xml.XmlNodeList childNodes = new System.Xml.XmlDocument().ChildNodes;
+                childNodes.Should().ContainSingle();";
+
+            var source = GenerateCode.EnumerableCodeBlockAssertion(sourceAssertion);
+            try
+            {
+                DiagnosticVerifier.VerifyCSharpDiagnosticUsingAllAnalyzers(source);
+            }
+            catch (Exception e)
+            {
+                e.Message.Should().Contain("CS1061", "it's not supported by FluentAssertions");
+            }
+        }
+
+        [TestMethod]
+        public void CollectionShouldContainSingle_DictionaryShouldNotProduceInfo()
+        {
+            var sourceAssertion = @"
+                IDictionary<int, int> dictionary = new Dictionary<int, int>();
+                dictionary.Should().HaveCount(1);";
+
+            var source = GenerateCode.EnumerableCodeBlockAssertion(sourceAssertion);
+            DiagnosticVerifier.VerifyCSharpDiagnosticUsingAllAnalyzers(source);
+        }
+
+        [TestMethod]
+        public void CollectionShouldContainSingle_ContainSingleDoesNotCompileOnDictionary()
+        {
+            var sourceAssertion = @"
+                IDictionary<int, int> dictionary = new Dictionary<int, int>();
+                dictionary.Should().ContainSingle();";
+
+            var source = GenerateCode.EnumerableCodeBlockAssertion(sourceAssertion);
+            try
+            {
+                DiagnosticVerifier.VerifyCSharpDiagnosticUsingAllAnalyzers(source);
+            }
+            catch (Exception e)
+            {
+                e.Message.Should().Contain("CS1061", "it's not supported by FluentAssertions");
+            }
+        }
+
+        [TestMethod]
+        public void CollectionShouldContainSingle_MatchCollectionShouldNotProduceInfo()
+        {
+            var sourceAssertion = @"
+                System.Text.RegularExpressions.MatchCollection matches = System.Text.RegularExpressions.Regex.Matches("""", """");
+                matches.Should().HaveCount(1);";
+
+            var source = GenerateCode.EnumerableCodeBlockAssertion(sourceAssertion);
+            DiagnosticVerifier.VerifyCSharpDiagnosticUsingAllAnalyzers(source);
+        }
+
+        [TestMethod]
+        public void CollectionShouldContainSingle_ContainSingleDoesNotCompileOnMatchCollection()
+        {
+            var sourceAssertion = @"
+                System.Text.RegularExpressions.MatchCollection matches = System.Text.RegularExpressions.Regex.Matches("""", """");
+                matches.Should().ContainSingle();";
+
+            var source = GenerateCode.EnumerableCodeBlockAssertion(sourceAssertion);
+            try
+            {
+                DiagnosticVerifier.VerifyCSharpDiagnosticUsingAllAnalyzers(source);
+            }
+            catch (Exception e)
+            {
+                e.Message.Should().Contain("CS1061", "it's not supported by FluentAssertions");
+            }
+        }
+
         [AssertionDataTestMethod]
         [AssertionDiagnostic("actual.Should().NotBeNull().And.NotBeEmpty({0});")]
         [AssertionDiagnostic("actual.Should().NotBeEmpty().And.NotBeNull({0});")]
@@ -459,6 +547,35 @@ namespace FluentAssertions.Analyzers.Tests
             newAssertion: "actual.AsEnumerable().Should().HaveElementAt(6, expectedItem{0}).And.ToString();")]
         [Implemented]
         public void CollectionShouldHaveElementAt_TestCodeFix(string oldAssertion, string newAssertion) => VerifyCSharpFixCodeBlock<CollectionShouldHaveElementAtCodeFix, CollectionShouldHaveElementAtAnalyzer>(oldAssertion, newAssertion);
+
+        [TestMethod]
+        public void CollectionShouldHaveElementAt_IDictionaryShouldNotGenerateInfo()
+        {
+            var sourceAssertion = @"
+                IDictionary<string, int> dictionary = new Dictionary<string, int>();
+                dictionary[""""].Should().Be(0);";
+
+            var source = GenerateCode.EnumerableCodeBlockAssertion(sourceAssertion);
+            DiagnosticVerifier.VerifyCSharpDiagnosticUsingAllAnalyzers(source);
+        }
+
+        [TestMethod]
+        public void CollectionShouldHaveElementAt_ElementAtDoesNotCompileOnDictionary()
+        {
+            var sourceAssertion = @"
+                IDictionary<string, int> dictionary = new Dictionary<string, int>();
+                dictionary[""""].Should().HaveElementAt("""", 0);";
+
+            var source = GenerateCode.EnumerableCodeBlockAssertion(sourceAssertion);
+            try
+            {
+                DiagnosticVerifier.VerifyCSharpDiagnosticUsingAllAnalyzers(source);
+            }
+            catch (Exception e)
+            {
+                e.Message.Should().Contain("CS1061", "it's not supported by FluentAssertions");
+            }
+        }
 
         [AssertionDataTestMethod]
         [AssertionDiagnostic("actual.OrderBy(x => x.BooleanProperty).Should().Equal(actual{0});")]

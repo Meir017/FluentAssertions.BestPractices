@@ -15,6 +15,7 @@ using Microsoft.CodeAnalysis.Simplification;
 using Microsoft.CodeAnalysis.Formatting;
 using Microsoft.CodeAnalysis.CSharp;
 using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace FluentAssertions.Analyzers.Tests
 {
@@ -30,6 +31,7 @@ namespace FluentAssertions.Analyzers.Tests
                 typeof(object), // System.Private.CoreLib
                 typeof(Console), // System
                 typeof(Enumerable), // System.Linq
+                typeof(Regex), // System.Text.RegularExpresions
                 typeof(CSharpCompilation), // Microsoft.CodeAnalysis.CSharp
                 typeof(Compilation), // Microsoft.CodeAnalysis
                 typeof(AssertionScope), // FluentAssertions.Core
